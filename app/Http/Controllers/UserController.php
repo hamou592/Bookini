@@ -16,7 +16,7 @@ class UserController extends Controller
             return response()->view('errors.unauthorized', [], 403);
         }
 
-        $users = User::all();
+        $users = User::with('roles')->get();
         return view('users.index', compact('users'));
     }
 
@@ -30,6 +30,12 @@ class UserController extends Controller
     // Store user
     public function store(Request $request)
     {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
+            'role_id' => 'required'
+        ]);
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -53,19 +59,33 @@ class UserController extends Controller
 
     // Update
     public function update(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
+{
+    $request->validate([
+        'name' => 'required',
+        'email' => 'required|email|unique:users,email,' . $id,
+        'role_id' => 'required',
+        'password' => 'nullable|min:6'
+    ]);
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-        ]);
+    $user = User::findOrFail($id);
 
-        // update role
-        $user->roles()->sync([$request->role_id]);
+    $data = [
+        'name' => $request->name,
+        'email' => $request->email,
+    ];
 
-        return redirect('/users');
+    // Only update password if provided
+    if ($request->filled('password')) {
+        $data['password'] = \Hash::make($request->password);
     }
+
+    $user->update($data);
+
+    // update role
+    $user->roles()->sync([$request->role_id]);
+
+    return redirect('/users');
+}
 
     // Delete
     public function destroy($id)
