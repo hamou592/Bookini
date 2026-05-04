@@ -25,12 +25,15 @@
                    class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition">
                     Users
                 </a>
-            @endif
 
-            <a href="#"
+            <a href="/providers"
                class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
                 Providers
             </a>
+            @endif
+
+
+
 
             <a href="#"
                class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">

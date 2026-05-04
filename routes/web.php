@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ProviderController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -13,7 +14,7 @@ Route::middleware(['auth', 'hasRole'])->get('/dashboard', function () {
 })->name('dashboard');
 
 // USERS (only super_admin)
-Route::middleware(['auth', 'hasRole'])->group(function () {
+Route::middleware(['auth', 'hasRole:super_admin'])->group(function () {
 
     Route::get('/users', [UserController::class, 'index']);
 
@@ -24,7 +25,19 @@ Route::middleware(['auth', 'hasRole'])->group(function () {
     Route::put('/users/{id}', [UserController::class, 'update']);
 
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // PROVIDERS
+        Route::get('/providers', [ProviderController::class, 'index']);
+        Route::get('/providers/create', [ProviderController::class, 'create']);
+        Route::post('/providers', [ProviderController::class, 'store']);
+
+        Route::get('/providers/{id}/edit', [ProviderController::class, 'edit']);
+        Route::put('/providers/{id}', [ProviderController::class, 'update']);
+
+        Route::delete('/providers/{id}', [ProviderController::class, 'destroy']);
 });
+
+
 
 // Profile
 Route::middleware('auth')->group(function () {
