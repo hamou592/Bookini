@@ -12,28 +12,29 @@ use Illuminate\Support\Facades\Storage;
 class UserController extends Controller
 {
     // List users
-    public function index(Request $request)
+  public function index(Request $request)
 {
-    if (!auth()->user()->hasRole('super_admin')) {
-        return response()->view('errors.unauthorized', [], 403);
-    }
+    $query = User::with(['provider', 'roles']);
 
-    $query = User::with(['roles', 'provider']);
-
-    // 🔍 Search (name, email, provider)
+    // 🔍 Search
     if ($request->search) {
-        $search = $request->search;
-
-        $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%$search%")
-              ->orWhere('email', 'like', "%$search%")
-              ->orWhereHas('provider', function ($p) use ($search) {
-                  $p->where('name', 'like', "%$search%");
+        $query->where(function ($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->search . '%')
+              ->orWhere('email', 'like', '%' . $request->search . '%')
+              ->orWhereHas('provider', function ($q2) use ($request) {
+                  $q2->where('name', 'like', '%' . $request->search . '%');
               });
         });
     }
 
-    $users = $query->paginate(10); //  pagination
+    // 🎯 Role filter
+    if ($request->role) {
+        $query->whereHas('roles', function ($q) use ($request) {
+            $q->where('name', $request->role);
+        });
+    }
+
+    $users = $query->paginate(10)->withQueryString();
 
     return view('users.index', compact('users'));
 }

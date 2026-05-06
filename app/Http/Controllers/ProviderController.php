@@ -7,11 +7,37 @@ use Illuminate\Http\Request;
 
 class ProviderController extends Controller
 {
-    public function index()
-    {
-        $providers = Provider::withCount('users')->paginate(10);
-        return view('providers.index', compact('providers'));
+
+public function index(Request $request)
+{
+    $query = Provider::query()->withCount('users');
+    // 🔍 Search (name OR phone)
+    if ($request->search) {
+        $query->where(function ($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->search . '%')
+              ->orWhere('phone', 'like', '%' . $request->search . '%');
+        });
     }
+
+    // 🎯 Filter: type
+    if ($request->type) {
+        $query->where('type', $request->type);
+    }
+
+    // 🎯 Filter: status
+    if ($request->status) {
+        $query->where('subscription_status', $request->status);
+    }
+
+    $providers = $query->latest()->paginate(10)->withQueryString();
+
+    // ⚡ AJAX response
+    if ($request->ajax()) {
+        return view('providers.partials.table', compact('providers'))->render();
+    }
+
+    return view('providers.index', compact('providers'));
+}
 
     public function create()
     {
@@ -91,8 +117,16 @@ public function store(Request $request)
 }
 
     public function destroy($id)
-    {
-        Provider::findOrFail($id)->delete();
-        return redirect('/providers');
-    }
+{
+    $provider = Provider::findOrFail($id);
+
+    // detach users manually (extra safety)
+    $provider->users()->update([
+        'provider_id' => null
+    ]);
+
+    $provider->delete();
+
+    return redirect('/providers');
+}
 }

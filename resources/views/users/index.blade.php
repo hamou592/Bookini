@@ -15,11 +15,45 @@
 </div>
 
 <!-- 🔍 Search -->
-<form method="GET" action="/users" class="mb-6">
-    <input type="text" name="search" value="{{ request('search') }}"
+<!-- 🔍 Search + Filter -->
+<form method="GET" action="/users" 
+      class="mb-6 flex flex-col md:flex-row gap-3 md:items-center">
+
+    <!-- Search -->
+    <input 
+        type="text" 
+        name="search" 
+        value="{{ request('search') }}"
         placeholder="Search name, email, provider..."
-        class="w-full p-3 rounded-lg border"
-        style="border-color:#e5e7eb;">
+        class="flex-1 p-3 rounded-xl border focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+    >
+
+    <!-- Role Filter -->
+    <select 
+        name="role" 
+        class="p-3 rounded-xl border bg-white focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+    >
+        <option value="">All Roles</option>
+        <option value="super_admin" {{ request('role') == 'superadmin' ? 'selected' : '' }}>Super Admin</option>
+        <option value="secretary" {{ request('role') == 'secretary' ? 'selected' : '' }}>Secretary</option>
+        <option value="provider_admin" {{ request('role') == 'doctor' ? 'selected' : '' }}>Doctor</option>
+    </select>
+
+    <!-- Submit -->
+    <button 
+        type="submit"
+        style="background-color: var(--primary);"
+        class="text-white px-5 py-3 rounded-xl shadow hover:opacity-90 transition"
+    >
+        Filter
+    </button>
+
+    <!-- Reset -->
+    <a href="/users"
+       class="px-4 py-3 rounded-xl border text-gray-600 hover:bg-gray-100 transition">
+        Reset
+    </a>
+
 </form>
 
 <div class="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">

@@ -16,6 +16,27 @@
     </a>
 </div>
 
+<form id="filterForm" class="mb-6 flex flex-wrap gap-3">
+
+    <input id="searchInput"
+        type="text"
+        placeholder="Search name or phone..."
+        class="p-3 border rounded-xl flex-1">
+
+    <select id="typeFilter" class="p-3 border rounded-xl">
+        <option value="">All Types</option>
+        <option value="clinic">Clinic</option>
+        <option value="doctor">Doctor</option>
+    </select>
+
+    <select id="statusFilter" class="p-3 border rounded-xl">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+    </select>
+
+</form>
+
 <div class="bg-white rounded-2xl shadow border overflow-hidden">
 
 <table class="w-full text-sm">
@@ -33,99 +54,15 @@
         </tr>
     </thead>
 
-    <tbody class="text-gray-700">
-
-        @foreach($providers as $provider)
-        <tr class="border-t hover:bg-gray-50 transition">
-
-            <!-- LOGO -->
-            <td class="p-4">
-                @if($provider->logo)
-                    <img src="{{ asset('storage/'.$provider->logo) }}"
-                         class="w-10 h-10 rounded-full object-cover cursor-pointer"
-                         onclick="openImage('{{ asset('storage/'.$provider->logo) }}')">
-                @else
-                    <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-xs">
-                        N/A
-                    </div>
-                @endif
-            </td>
-
-            <!-- NAME -->
-            <td class="p-4 font-medium">
-                {{ $provider->name }}
-            </td>
-
-            <!-- TYPE -->
-            <td class="p-4">
-                <span class="px-3 py-1 rounded-full text-xs font-medium"
-                      style="background-color: #EEF2FF; color: var(--primary);">
-                    {{ ucfirst($provider->type) }}
-                </span>
-            </td>
-
-            <!-- PHONE -->
-            <td class="p-4">
-                {{ $provider->phone ?? '-' }}
-            </td>
-
-            <!-- STATUS -->
-            <td class="p-4">
-                <span class="px-3 py-1 rounded-full text-xs font-medium
-                    {{ $provider->subscription_status == 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-600' }}">
-                    {{ ucfirst($provider->subscription_status) }}
-                </span>
-            </td>
-
-            <!-- START -->
-            <td class="p-4">
-                {{ $provider->subscription_start_at 
-                    ? \Carbon\Carbon::parse($provider->subscription_start_at)->format('Y-m-d H:i')
-                    : '-' }}
-            </td>
-
-            <!-- EXPIRES -->
-            <td class="p-4">
-                {{ $provider->subscription_start_at 
-                    ? \Carbon\Carbon::parse($provider->subscription_start_at)->addDays(30)->format('Y-m-d H:i')
-                    : '-' }}
-            </td>
-
-            <!-- ACTIONS -->
-            <td class="p-4 text-right">
-                <div class="inline-flex gap-2">
-
-                    <a href="/providers/{{ $provider->id }}/edit"
-                       style="background-color: var(--primary);"
-                       onmouseover="this.style.backgroundColor='var(--primary-hover)'"
-                       onmouseout="this.style.backgroundColor='var(--primary)'"
-                       class="text-white px-3 py-1 rounded-lg text-sm">
-                        Edit
-                    </a>
-
-                    <form method="POST" action="/providers/{{ $provider->id }}"
-                          onsubmit="return confirm('Delete this provider?');">
-                        @csrf
-                        @method('DELETE')
-
-                        <button
-                            class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600">
-                            Delete
-                        </button>
-                    </form>
-
-                </div>
-            </td>
-
-        </tr>
-        @endforeach
-
-    </tbody>
+    @include('providers.partials.table')
 
 </table>
 
 </div>
-
+<!-- ✅ Pagination OUTSIDE table -->
+<div id="paginationWrapper" class="mt-6">
+    {{ $providers->links() }}
+</div>
 <!-- IMAGE MODAL -->
 <div id="imageModal" 
      class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
@@ -144,6 +81,62 @@ function openImage(src) {
 document.getElementById('imageModal').onclick = function () {
     this.classList.add('hidden');
 };
+</script>
+
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const typeFilter = document.getElementById('typeFilter');
+const statusFilter = document.getElementById('statusFilter');
+
+let debounceTimer;
+
+function fetchProviders(page = 1) {
+    const search = searchInput.value;
+    const type = typeFilter.value;
+    const status = statusFilter.value;
+
+    fetch(`/providers?page=${page}&search=${search}&type=${type}&status=${status}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('providersTable').outerHTML = html;
+
+        // update pagination
+        fetch(`/providers?page=${page}&search=${search}&type=${type}&status=${status}`)
+            .then(res => res.text())
+            .then(full => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(full, 'text/html');
+                document.getElementById('paginationWrapper').innerHTML =
+                    doc.getElementById('paginationWrapper').innerHTML;
+            });
+    });
+}
+
+// debounce
+function debounceFetch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => fetchProviders(), 300);
+}
+
+// events
+searchInput.addEventListener('keyup', debounceFetch);
+typeFilter.addEventListener('change', () => fetchProviders());
+statusFilter.addEventListener('change', () => fetchProviders());
+
+// pagination click
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#paginationWrapper a')) {
+        e.preventDefault();
+        const url = e.target.closest('a').href;
+        const page = new URL(url).searchParams.get('page');
+        fetchProviders(page);
+    }
+});
 </script>
 
 @endsection
