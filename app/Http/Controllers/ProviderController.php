@@ -33,7 +33,7 @@ public function index(Request $request)
 
     // ⚡ AJAX response
     if ($request->ajax()) {
-        return view('providers.partials.table', compact('providers'))->render();
+        return view('providers.partials.table_with_pagination', compact('providers'))->render();
     }
 
     return view('providers.index', compact('providers'));

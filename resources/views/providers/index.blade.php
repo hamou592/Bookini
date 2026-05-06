@@ -37,7 +37,7 @@
 
 </form>
 
-<div class="bg-white rounded-2xl shadow border overflow-hidden">
+<!-- <div class="bg-white rounded-2xl shadow border overflow-hidden">
 
 <table class="w-full text-sm">
 
@@ -58,10 +58,14 @@
 
 </table>
 
-</div>
+</div> -->
 <!-- ✅ Pagination OUTSIDE table -->
-<div id="paginationWrapper" class="mt-6">
-    {{ $providers->links() }}
+<div class="bg-white rounded-2xl shadow border overflow-hidden">
+
+    <div id="providersContent">
+        @include('providers.partials.table_with_pagination')
+    </div>
+
 </div>
 <!-- IMAGE MODAL -->
 <div id="imageModal" 
@@ -103,17 +107,7 @@ function fetchProviders(page = 1) {
     })
     .then(res => res.text())
     .then(html => {
-        document.getElementById('providersTable').outerHTML = html;
-
-        // update pagination
-        fetch(`/providers?page=${page}&search=${search}&type=${type}&status=${status}`)
-            .then(res => res.text())
-            .then(full => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(full, 'text/html');
-                document.getElementById('paginationWrapper').innerHTML =
-                    doc.getElementById('paginationWrapper').innerHTML;
-            });
+        document.getElementById('providersContent').innerHTML = html;
     });
 }
 
