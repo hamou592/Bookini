@@ -6,7 +6,7 @@
     Edit User
 </h2>
 
-<form method="POST" action="/users/{{ $user->id }}"
+<form id="editUserForm" method="POST" action="/users/{{ $user->id }}"
       enctype="multipart/form-data"
       class="space-y-5 bg-white p-6 rounded-2xl shadow border">
     @csrf
@@ -21,10 +21,15 @@
 
     <!-- Email -->
     <div>
-        <label class="text-sm" style="color: var(--text-secondary);">Email</label>
-        <input value="{{ $user->email }}" name="email"
-            class="w-full p-2 rounded-lg border focus:ring-2">
-    </div>
+    <label class="text-sm" style="color: var(--text-secondary);">Email</label>
+
+    <input id="emailInput"
+        value="{{ $user->email }}"
+        name="email"
+        class="w-full p-2 rounded-lg border focus:ring-2">
+
+    <p id="emailError" class="text-red-500 text-sm mt-1 hidden"></p>
+</div>
 
     <!-- Password -->
     <div>
@@ -96,8 +101,10 @@
             class="w-full border p-2 rounded-lg">
 
         <!-- LOGO UPLOAD -->
-        <input type="file" name="new_provider_logo"
-            class="w-full border p-2 rounded-lg">
+        <input type="file" id="logoInput" name="new_provider_logo"
+    class="w-full border p-2 rounded-lg">
+
+<p id="logoError" class="text-red-500 text-sm mt-1 hidden"></p>
 
         <select name="new_provider_subscription_status"
             class="w-full border p-2 rounded-lg">
@@ -115,6 +122,7 @@
 
     <!-- BUTTON -->
     <button
+    id="submitBtn"
         style="background-color: var(--primary);"
         onmouseover="this.style.backgroundColor='var(--primary-hover)'"
         onmouseout="this.style.backgroundColor='var(--primary)'"
@@ -140,6 +148,102 @@ document.querySelectorAll('input[name="provider_mode"]').forEach(el => {
 
 // RUN ON LOAD
 toggleProviderMode();
+</script>
+
+<script>
+const form = document.getElementById('editUserForm');
+
+const emailInput = document.getElementById('emailInput');
+const logoInput = document.getElementById('logoInput');
+
+const emailError = document.getElementById('emailError');
+const logoError = document.getElementById('logoError');
+
+const submitBtn = document.getElementById('submitBtn');
+
+// 🔍 EMAIL VALIDATION
+function validateEmail() {
+    const email = emailInput.value.trim();
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!regex.test(email)) {
+        emailError.textContent = "Invalid email format";
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('border-red-500');
+        return false;
+    }
+
+    emailError.classList.add('hidden');
+    emailInput.classList.remove('border-red-500');
+    return true;
+}
+
+// 🖼️ LOGO VALIDATION
+function validateLogo() {
+    const file = logoInput.files[0];
+
+    if (!file) {
+        logoError.classList.add('hidden');
+        logoInput.classList.remove('border-red-500');
+        return true;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    const maxSize = 2 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+        logoError.textContent = "Only JPG or PNG allowed";
+        logoError.classList.remove('hidden');
+        logoInput.classList.add('border-red-500');
+        return false;
+    }
+
+    if (file.size > maxSize) {
+        logoError.textContent = "Max size is 2MB";
+        logoError.classList.remove('hidden');
+        logoInput.classList.add('border-red-500');
+        return false;
+    }
+
+    logoError.classList.add('hidden');
+    logoInput.classList.remove('border-red-500');
+    return true;
+}
+
+// ✅ GLOBAL VALIDATION
+function validateForm() {
+    let valid = true;
+
+    if (!validateEmail()) valid = false;
+    if (!validateLogo()) valid = false;
+
+    return valid;
+}
+
+// 🎯 REAL-TIME
+emailInput.addEventListener('input', updateButtonState);
+logoInput.addEventListener('change', updateButtonState);
+
+// 🔘 BUTTON STATE
+function updateButtonState() {
+    if (validateForm()) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// 🚫 BLOCK SUBMIT
+form.addEventListener('submit', function(e) {
+    if (!validateForm()) {
+        e.preventDefault();
+    }
+});
+
+// INIT
+updateButtonState();
 </script>
 
 @endsection

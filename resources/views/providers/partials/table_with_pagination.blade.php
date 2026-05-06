@@ -79,7 +79,7 @@
                         Edit
                     </a>
 
-                    <form method="POST" action="/providers/{{ $provider->id }}">
+                    <form method="POST" action="/providers/{{ $provider->id }}" onsubmit="return confirm('Are you sure you want to delete this provider?');">
                         @csrf
                         @method('DELETE')
 
