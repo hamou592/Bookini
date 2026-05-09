@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProviderController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\ServiceController;
 Route::get('/', function () {
     return view('welcome');
 });
@@ -13,9 +15,9 @@ Route::middleware(['auth', 'hasRole'])->get('/dashboard', function () {
     return view('admin.dashboard');
 })->name('dashboard');
 
-// USERS (only super_admin)
+//(only super_admin)
 Route::middleware(['auth', 'hasRole:super_admin'])->group(function () {
-
+    // USERS 
     Route::get('/users', [UserController::class, 'index']);
 
     Route::get('/users/create', [UserController::class, 'create']);
@@ -35,9 +37,40 @@ Route::middleware(['auth', 'hasRole:super_admin'])->group(function () {
         Route::put('/providers/{id}', [ProviderController::class, 'update']);
 
         Route::delete('/providers/{id}', [ProviderController::class, 'destroy']);
+    
+});
+
+Route::middleware(['auth', 'hasRole:super_admin,provider_admin,secretary'])->group(function () {
+
+    Route::get('/departments', [DepartmentController::class, 'index']);
+
+    Route::get('/departments/create', [DepartmentController::class, 'create']);
+    Route::post('/departments', [DepartmentController::class, 'store']);
+
+    Route::get('/departments/{id}/edit', [DepartmentController::class, 'edit']);
+    Route::put('/departments/{id}', [DepartmentController::class, 'update']);
+
+    Route::delete('/departments/{id}', [DepartmentController::class, 'destroy']);
 });
 
 
+
+
+Route::middleware([
+    'auth',
+    'hasRole:super_admin,provider_admin,secretary,doctor'
+])->group(function () {
+
+    Route::get('/services', [ServiceController::class, 'index']);
+
+    Route::get('/services/create', [ServiceController::class, 'create']);
+    Route::post('/services', [ServiceController::class, 'store']);
+
+    Route::get('/services/{id}/edit', [ServiceController::class, 'edit']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+});
 
 // Profile
 Route::middleware('auth')->group(function () {

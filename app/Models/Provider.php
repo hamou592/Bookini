@@ -26,4 +26,12 @@ class Provider extends Model
         ? \Carbon\Carbon::parse($this->subscription_start_at)->addDays(30)
         : null;
 }
+public function departments()
+{
+    return $this->hasMany(Department::class);
+}
+public function services()
+{
+    return $this->hasMany(Service::class);
+}
 }

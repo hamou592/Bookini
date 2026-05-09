@@ -35,12 +35,12 @@
 
 
 
-            <a href="#"
+            <a href="/departments"
                class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
                 Departments
             </a>
 
-            <a href="#"
+            <a href="/services"
                class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600">
                 Services
             </a>
