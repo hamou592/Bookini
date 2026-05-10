@@ -20,11 +20,17 @@ class DepartmentController extends Controller
         }
 
         // 🔍 SEARCH BY PROVIDER NAME
-        if ($request->search) {
-            $query->whereHas('provider', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%');
-            });
-        }
+        if ($request->search && Auth::user()->hasRole('super_admin')) {
+
+    $query->whereHas('provider', function ($q) use ($request) {
+
+        $q->where(
+            'name',
+            'like',
+            '%' . $request->search . '%'
+        );
+    });
+}
 
         $departments = $query->latest()->paginate(10)->withQueryString();
 
@@ -36,19 +42,28 @@ class DepartmentController extends Controller
         return view('departments.index', compact('departments'));
     }
 
-    private function authorizeDepartment($providerId)
+private function authorizeDepartment($providerId)
 {
     $user = Auth::user();
 
-    // super admin can access everything
+    // SUPER ADMIN
     if ($user->hasRole('super_admin')) {
-        return;
+        return true;
     }
 
-    // provider admin / secretary → must match provider
-    if ($user->provider_id != $providerId) {
-        abort(403);
+    // PROVIDER ADMIN / SECRETARY
+    if (
+        $user->hasRole([
+            'provider_admin',
+            'secretary'
+        ])
+        &&
+        $user->provider_id == $providerId
+    ) {
+        return true;
     }
+
+    abort(403);
 }
     public function create()
 {

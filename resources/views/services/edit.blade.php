@@ -14,7 +14,10 @@
     @csrf
     @method('PUT')
 
-    <div class="grid grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {{-- SUPER ADMIN ONLY --}}
+        @if(auth()->user()->hasRole('super_admin'))
 
         <div>
             <label class="block mb-2 font-medium">
@@ -22,6 +25,7 @@
             </label>
 
             <select name="provider_id"
+                    id="providerSelect"
                     class="w-full border rounded-xl p-3">
 
                 @foreach($providers as $provider)
@@ -38,12 +42,29 @@
             </select>
         </div>
 
-        <div>
+        @else
+
+            <input type="hidden"
+                   name="provider_id"
+                   value="{{ auth()->user()->provider_id }}">
+
+        @endif
+
+        {{-- DEPARTMENT --}}
+        <div id="departmentWrapper"
+    @if(
+        !auth()->user()->hasRole('super_admin')
+        &&
+        auth()->user()->provider?->type != 'clinic'
+    )
+        style="display:none;"
+    @endif>
             <label class="block mb-2 font-medium">
                 Department
             </label>
 
             <select name="department_id"
+                    id="departmentSelect"
                     class="w-full border rounded-xl p-3">
 
                 <option value="">
@@ -130,5 +151,85 @@
 </form>
 
 </div>
+
+{{-- SUPER ADMIN SCRIPT --}}
+@if(auth()->user()->hasRole('super_admin'))
+
+<script>
+
+const providerSelect = document.getElementById('providerSelect');
+const departmentSelect = document.getElementById('departmentSelect');
+
+const allDepartments = @json(
+    \App\Models\Department::all()
+);
+
+const allProviders = @json(
+    \App\Models\Provider::all()
+);
+
+const departmentWrapper =
+    document.getElementById(
+        'departmentWrapper'
+    );
+
+providerSelect.addEventListener('change', function () {
+
+    const providerId = this.value;
+
+    const provider = allProviders.find(
+        p => p.id == providerId
+    );
+
+    // RESET
+    departmentSelect.innerHTML =
+        '<option value="">Select Department</option>';
+
+    // NO PROVIDER
+    if (!providerId) {
+
+        departmentSelect.disabled = true;
+
+        departmentWrapper.style.display = 'none';
+
+        return;
+    }
+
+    // DOCTOR => HIDE DEPARTMENT
+    if (provider.type != 'clinic') {
+
+        departmentWrapper.style.display = 'none';
+
+        departmentSelect.disabled = true;
+
+        return;
+    }
+
+    // CLINIC => SHOW
+    departmentWrapper.style.display = 'block';
+
+    departmentSelect.disabled = false;
+
+    const filteredDepartments =
+        allDepartments.filter(
+            dept => dept.provider_id == providerId
+        );
+
+    filteredDepartments.forEach(department => {
+
+        departmentSelect.innerHTML += `
+            <option value="${department.id}">
+                ${department.name}
+            </option>
+        `;
+    });
+});
+providerSelect.dispatchEvent(
+    new Event('change')
+);
+
+</script>
+
+@endif
 
 @endsection

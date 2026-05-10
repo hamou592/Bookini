@@ -25,108 +25,127 @@ class ServiceController extends Controller
         return view('services.index', compact('services'));
     }
 
-    public function create()
-    {
-        $user = Auth::user();
+   public function create()
+{
+    $user = Auth::user();
 
-        // SUPER ADMIN
-        if ($user->hasRole('super_admin')) {
+    // SUPER ADMIN
+    if ($user->hasRole('super_admin')) {
 
-            $providers = Provider::all();
-            $departments = Department::all();
+        $providers = Provider::all();
 
-        } else {
+        // EMPTY departments initially
+        $departments = collect();
 
-            $providers = Provider::where('id', $user->provider_id)->get();
+    } else {
 
-            $departments = Department::where(
-                'provider_id',
-                $user->provider_id
-            )->get();
-        }
+        $providers = Provider::where(
+            'id',
+            $user->provider_id
+        )->get();
 
-        return view(
-            'services.create',
-            compact('providers', 'departments')
-        );
+        $departments = Department::where(
+            'provider_id',
+            $user->provider_id
+        )->get();
     }
 
+    return view(
+        'services.create',
+        compact('providers', 'departments')
+    );
+}
     public function store(Request $request)
-    {
-        $user = Auth::user();
+{
+    $user = Auth::user();
 
-        $request->validate([
-            'provider_id' => 'required|exists:providers,id',
-            'department_id' => 'nullable|exists:departments,id',
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'duration' => 'required|numeric',
-            'is_active' => 'required|boolean',
-        ]);
+    $provider = Provider::findOrFail(
+        $request->provider_id
+    );
 
-        // SECURITY
-        if (!$user->hasRole('super_admin')) {
+    $request->validate([
+        'provider_id' => 'required|exists:providers,id',
+        'department_id' => 'nullable|exists:departments,id',
+        'name' => 'required|string|max:255',
+        'price' => 'required|numeric',
+        'duration' => 'required|numeric',
+        'is_active' => 'required|boolean',
+    ]);
 
-            if ($request->provider_id != $user->provider_id) {
-                abort(403);
-            }
-        }
+    // SECURITY
+    if (!$user->hasRole('super_admin')) {
 
-        Service::create([
-            'provider_id' => $request->provider_id,
-            'department_id' => $request->department_id,
-            'name' => $request->name,
-            'price' => $request->price,
-            'duration' => $request->duration,
-            'is_active' => $request->is_active,
-        ]);
-
-        return redirect('/services')
-            ->with('success', 'Service created successfully');
-    }
-
-    public function edit($id)
-    {
-        $service = Service::findOrFail($id);
-
-        $user = Auth::user();
-
-        // SECURITY
-        if (
-            !$user->hasRole('super_admin')
-            && $service->provider_id != $user->provider_id
-        ) {
+        if ($request->provider_id != $user->provider_id) {
             abort(403);
         }
-
-        if ($user->hasRole('super_admin')) {
-
-            $providers = Provider::all();
-
-            $departments = Department::all();
-
-        } else {
-
-            $providers = Provider::where(
-                'id',
-                $user->provider_id
-            )->get();
-
-            $departments = Department::where(
-                'provider_id',
-                $user->provider_id
-            )->get();
-        }
-
-        return view(
-            'services.edit',
-            compact(
-                'service',
-                'providers',
-                'departments'
-            )
-        );
     }
+
+    // DOCTOR PROVIDER => NO DEPARTMENT
+    $departmentId = null;
+
+    if ($provider->type == 'clinic') {
+        $departmentId = $request->department_id;
+    }
+
+    Service::create([
+        'provider_id' => $request->provider_id,
+        'department_id' => $departmentId,
+        'name' => $request->name,
+        'price' => $request->price,
+        'duration' => $request->duration,
+        'is_active' => $request->is_active,
+    ]);
+
+    return redirect('/services')
+        ->with('success', 'Service created successfully');
+}
+
+    public function edit($id)
+{
+    $service = Service::findOrFail($id);
+
+    $user = Auth::user();
+
+    // SECURITY
+    if (
+        !$user->hasRole('super_admin')
+        && $service->provider_id != $user->provider_id
+    ) {
+        abort(403);
+    }
+
+    if ($user->hasRole('super_admin')) {
+
+        $providers = Provider::all();
+
+        // ONLY departments of current provider
+        $departments = Department::where(
+            'provider_id',
+            $service->provider_id
+        )->get();
+
+    } else {
+
+        $providers = Provider::where(
+            'id',
+            $user->provider_id
+        )->get();
+
+        $departments = Department::where(
+            'provider_id',
+            $user->provider_id
+        )->get();
+    }
+
+    return view(
+        'services.edit',
+        compact(
+            'service',
+            'providers',
+            'departments'
+        )
+    );
+}
 
     public function update(Request $request, $id)
     {
@@ -150,15 +169,23 @@ class ServiceController extends Controller
             'duration' => 'required|numeric',
             'is_active' => 'required|boolean',
         ]);
+        $provider = Provider::findOrFail(
+    $request->provider_id
+);
 
+$departmentId = null;
+
+if ($provider->type == 'clinic') {
+    $departmentId = $request->department_id;
+}
         $service->update([
-            'provider_id' => $request->provider_id,
-            'department_id' => $request->department_id,
-            'name' => $request->name,
-            'price' => $request->price,
-            'duration' => $request->duration,
-            'is_active' => $request->is_active,
-        ]);
+    'provider_id' => $request->provider_id,
+    'department_id' => $departmentId,
+    'name' => $request->name,
+    'price' => $request->price,
+    'duration' => $request->duration,
+    'is_active' => $request->is_active,
+]);
 
         return redirect('/services')
             ->with('success', 'Service updated successfully');

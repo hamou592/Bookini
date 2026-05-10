@@ -88,16 +88,17 @@
                     </a>
 
                     <form action="/services/{{ $service->id }}"
-                          method="POST">
+      method="POST"
+      onsubmit="return confirm('Are you sure you want to delete this service?');">
 
-                        @csrf
-                        @method('DELETE')
+    @csrf
+    @method('DELETE')
 
-                        <button class="px-4 py-2 rounded-lg bg-red-500 text-white">
-                            Delete
-                        </button>
+    <button class="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition">
+        Delete
+    </button>
 
-                    </form>
+</form>
 
                 </td>
 

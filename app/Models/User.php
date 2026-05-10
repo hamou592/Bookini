@@ -2,23 +2,31 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
+
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
+
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'provider_id'];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'provider_id'
+    ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = [
+        'password',
+        'remember_token'
+    ];
 
     protected function casts(): array
     {
@@ -30,15 +38,30 @@ class User extends Authenticatable
 
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'user_roles');
+        return $this->belongsToMany(
+            Role::class,
+            'user_roles'
+        );
     }
 
-    public function hasRole($role)
+    public function hasRole($roles)
     {
-        return $this->roles()->where('name', $role)->exists();
+        // SINGLE ROLE
+        if (!is_array($roles)) {
+
+            return $this->roles()
+                ->where('name', $roles)
+                ->exists();
+        }
+
+        // MULTIPLE ROLES
+        return $this->roles()
+            ->whereIn('name', $roles)
+            ->exists();
     }
+
     public function provider()
-{
-    return $this->belongsTo(Provider::class);
-}
+    {
+        return $this->belongsTo(Provider::class);
+    }
 }

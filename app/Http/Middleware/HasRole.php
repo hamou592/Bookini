@@ -7,22 +7,40 @@ use Illuminate\Http\Request;
 
 class HasRole
 {
-    public function handle(Request $request, Closure $next, $role = null)
+    public function handle(Request $request, Closure $next, ...$roles)
     {
         if (!auth()->check()) {
             return redirect('/login');
         }
 
-        // If specific role required
-        if ($role && !auth()->user()->hasRole($role)) {
-            return response()->view('errors.unauthorized', [], 403);
+        $user = auth()->user();
+
+        // If route only requires authenticated user with any role
+        if (empty($roles)) {
+
+            if (!$user->roles()->exists()) {
+                return response()->view(
+                    'errors.unauthorized',
+                    [],
+                    403
+                );
+            }
+
+            return $next($request);
         }
 
-        // If just "has any role"
-        if (!$role && !auth()->user()->roles()->exists()) {
-            return redirect('/login');
+        // CHECK MULTIPLE ROLES
+        foreach ($roles as $role) {
+
+            if ($user->hasRole($role)) {
+                return $next($request);
+            }
         }
 
-        return $next($request);
+        return response()->view(
+            'errors.unauthorized',
+            [],
+            403
+        );
     }
 }
