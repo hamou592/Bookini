@@ -11,7 +11,9 @@
 
 <div class="bg-white p-8 rounded-2xl shadow">
 
-<form method="POST" action="/services">
+<form method="POST"
+      action="/services"
+      id="serviceForm">
 
     @csrf
 
@@ -57,13 +59,13 @@
 
         {{-- DEPARTMENT --}}
         <div id="departmentWrapper"
-    @if(
-        !auth()->user()->hasRole('super_admin')
-        &&
-        auth()->user()->provider?->type != 'clinic'
-    )
-        style="display:none;"
-    @endif>
+            @if(
+                !auth()->user()->hasRole('super_admin')
+                &&
+                auth()->user()->provider?->type != 'clinic'
+            )
+                style="display:none;"
+            @endif>
 
             <label class="block mb-2 font-medium">
                 Department
@@ -79,16 +81,18 @@
                     Select Department
                 </option>
 
-                @foreach($departments as $department)
+                {{-- NON SUPER ADMIN --}}
+                @unless(auth()->user()->hasRole('super_admin'))
 
-                    <option value="{{ $department->id }}"
-                            data-provider="{{ $department->provider_id }}">
+                    @foreach($departments as $department)
 
-                        {{ $department->name }}
+                        <option value="{{ $department->id }}">
+                            {{ $department->name }}
+                        </option>
 
-                    </option>
+                    @endforeach
 
-                @endforeach
+                @endunless
 
             </select>
 
@@ -210,183 +214,262 @@
 
 </div>
 
-{{-- SUPER ADMIN SCRIPT --}}
-@if(auth()->user()->hasRole('super_admin'))
-
 <script>
 
-const providerSelect = document.getElementById('providerSelect');
+const providerField =
+    document.getElementById('providerSelect');
 
-const departmentSelect = document.getElementById('departmentSelect');
+const departmentField =
+    document.getElementById('departmentSelect');
 
-const allDepartments = @json(
-    \App\Models\Department::all()
-);
+const departmentWrapper =
+    document.getElementById('departmentWrapper');
+
+const nameField =
+    document.getElementById('serviceName');
+
+const priceField =
+    document.getElementById('price');
+
+const durationField =
+    document.getElementById('duration');
+
+const submitBtn =
+    document.getElementById('submitBtn');
 
 const allProviders = @json(
     \App\Models\Provider::all()
 );
 
-const departmentWrapper =
-    document.getElementById(
-        'departmentWrapper'
-    );
+const allDepartments = @json(
+    \App\Models\Department::all()
+);
 
-providerSelect.addEventListener('change', function () {
+function isClinicProvider() {
 
-    const providerId = this.value;
+    @if(auth()->user()->hasRole('super_admin'))
 
-    const provider = allProviders.find(
-        p => p.id == providerId
-    );
+        const providerId = providerField.value;
 
-    // RESET
-    departmentSelect.innerHTML =
+        if (!providerId) {
+            return false;
+        }
+
+        const provider = allProviders.find(
+            p => p.id == providerId
+        );
+
+        return provider &&
+               provider.type &&
+               provider.type.toLowerCase() === 'clinic';
+
+    @else
+
+        return @json(
+            auth()->user()->provider?->type == 'clinic'
+        );
+
+    @endif
+}
+
+function loadDepartments(providerId) {
+
+    departmentField.innerHTML =
         '<option value="">Select Department</option>';
-
-    // NO PROVIDER
-    if (!providerId) {
-
-        departmentSelect.disabled = true;
-
-        departmentWrapper.style.display = 'none';
-
-        return;
-    }
-
-    // DOCTOR => HIDE DEPARTMENT
-    if (provider.type != 'clinic') {
-
-        departmentWrapper.style.display = 'none';
-
-        departmentSelect.disabled = true;
-
-        return;
-    }
-
-    // CLINIC => SHOW
-    departmentWrapper.style.display = 'block';
-
-    departmentSelect.disabled = false;
 
     const filteredDepartments =
         allDepartments.filter(
             dept => dept.provider_id == providerId
         );
 
-    filteredDepartments.forEach(department => {
+    filteredDepartments.forEach(
+        department => {
 
-        departmentSelect.innerHTML += `
-            <option value="${department.id}">
-                ${department.name}
-            </option>
-        `;
-    });
-});
-</script>
+            departmentField.innerHTML += `
+                <option value="${department.id}">
+                    ${department.name}
+                </option>
+            `;
+        }
+    );
+}
 
-@endif
-
-<script>
-
-const departmentField = document.getElementById('departmentSelect');
-
-const nameField = document.getElementById('serviceName');
-
-const priceField = document.getElementById('price');
-
-const durationField = document.getElementById('duration');
-
-const submitBtn = document.getElementById('submitBtn');
-
-function validateForm() {
+function validateForm(showErrors = false) {
 
     let valid = true;
 
-    // DEPARTMENT
-    if (!departmentField.value) {
+    // =========================
+    // PROVIDER VALIDATION
+    // =========================
 
-        document
-            .getElementById('departmentError')
-            .classList.remove('hidden');
+    @if(auth()->user()->hasRole('super_admin'))
 
-        if (valid) {
-            departmentField.focus();
-        }
+    if (!providerField.value) {
 
         valid = false;
+
+        if (showErrors) {
+
+            providerField.classList.add(
+                'border-red-500'
+            );
+        }
+
+    } else {
+
+        providerField.classList.remove(
+            'border-red-500'
+        );
+    }
+
+    @endif
+
+    // =========================
+    // DEPARTMENT VALIDATION
+    // =========================
+
+    const departmentRequired =
+        isClinicProvider();
+
+    if (
+        departmentRequired &&
+        departmentWrapper.style.display !== 'none'
+    ) {
+
+        if (!departmentField.value) {
+
+            valid = false;
+
+            if (showErrors) {
+
+                document
+                    .getElementById('departmentError')
+                    .classList.remove('hidden');
+
+                departmentField.classList.add(
+                    'border-red-500'
+                );
+            }
+
+        } else {
+
+            document
+                .getElementById('departmentError')
+                .classList.add('hidden');
+
+            departmentField.classList.remove(
+                'border-red-500'
+            );
+        }
 
     } else {
 
         document
             .getElementById('departmentError')
             .classList.add('hidden');
+
+        departmentField.classList.remove(
+            'border-red-500'
+        );
     }
 
-    // NAME
+    // =========================
+    // NAME VALIDATION
+    // =========================
+
     if (!nameField.value.trim()) {
 
-        document
-            .getElementById('nameError')
-            .classList.remove('hidden');
-
-        if (valid) {
-            nameField.focus();
-        }
-
         valid = false;
+
+        if (showErrors) {
+
+            document
+                .getElementById('nameError')
+                .classList.remove('hidden');
+
+            nameField.classList.add(
+                'border-red-500'
+            );
+        }
 
     } else {
 
         document
             .getElementById('nameError')
             .classList.add('hidden');
+
+        nameField.classList.remove(
+            'border-red-500'
+        );
     }
 
-    // PRICE
+    // =========================
+    // PRICE VALIDATION
+    // =========================
+
     if (!priceField.value) {
 
-        document
-            .getElementById('priceError')
-            .classList.remove('hidden');
-
-        if (valid) {
-            priceField.focus();
-        }
-
         valid = false;
+
+        if (showErrors) {
+
+            document
+                .getElementById('priceError')
+                .classList.remove('hidden');
+
+            priceField.classList.add(
+                'border-red-500'
+            );
+        }
 
     } else {
 
         document
             .getElementById('priceError')
             .classList.add('hidden');
+
+        priceField.classList.remove(
+            'border-red-500'
+        );
     }
 
-    // DURATION
+    // =========================
+    // DURATION VALIDATION
+    // =========================
+
     if (!durationField.value) {
 
-        document
-            .getElementById('durationError')
-            .classList.remove('hidden');
-
-        if (valid) {
-            durationField.focus();
-        }
-
         valid = false;
+
+        if (showErrors) {
+
+            document
+                .getElementById('durationError')
+                .classList.remove('hidden');
+
+            durationField.classList.add(
+                'border-red-500'
+            );
+        }
 
     } else {
 
         document
             .getElementById('durationError')
             .classList.add('hidden');
+
+        durationField.classList.remove(
+            'border-red-500'
+        );
     }
 
+    // =========================
     // BUTTON STATE
-    if (valid) {
+    // =========================
 
-        submitBtn.disabled = false;
+    submitBtn.disabled = !valid;
+
+    if (valid) {
 
         submitBtn.classList.remove(
             'opacity-50',
@@ -395,26 +478,129 @@ function validateForm() {
 
     } else {
 
-        submitBtn.disabled = true;
-
         submitBtn.classList.add(
             'opacity-50',
             'cursor-not-allowed'
         );
     }
+
+    return valid;
 }
 
-// EVENTS
-departmentField.addEventListener('change', validateForm);
+@if(auth()->user()->hasRole('super_admin'))
 
-nameField.addEventListener('input', validateForm);
+providerField.addEventListener(
+    'change',
+    function () {
 
-priceField.addEventListener('input', validateForm);
+        const providerId = this.value;
 
-durationField.addEventListener('input', validateForm);
+        const provider = allProviders.find(
+            p => p.id == providerId
+        );
 
-// INITIAL
-validateForm();
+        // RESET
+        departmentField.innerHTML =
+            '<option value="">Select Department</option>';
+
+        departmentField.value = '';
+
+        // NO PROVIDER
+        if (!providerId) {
+
+            departmentWrapper.style.display =
+                'none';
+
+            departmentField.disabled = true;
+
+            validateForm(false);
+
+            return;
+        }
+
+        // DOCTOR PROVIDER
+        if (
+            !provider ||
+            provider.type.toLowerCase() !== 'clinic'
+        ) {
+
+            departmentWrapper.style.display =
+                'none';
+
+            departmentField.disabled = true;
+
+            departmentField.value = '';
+
+            validateForm(false);
+
+            return;
+        }
+
+        // CLINIC PROVIDER
+        departmentWrapper.style.display =
+            'block';
+
+        departmentField.disabled = false;
+
+        loadDepartments(providerId);
+
+        validateForm(false);
+    }
+);
+
+@endif
+
+// =========================
+// LIVE VALIDATION
+// =========================
+
+departmentField?.addEventListener(
+    'change',
+    () => validateForm(false)
+);
+
+nameField.addEventListener(
+    'input',
+    () => validateForm(false)
+);
+
+priceField.addEventListener(
+    'input',
+    () => validateForm(false)
+);
+
+durationField.addEventListener(
+    'input',
+    () => validateForm(false)
+);
+
+// =========================
+// SUBMIT VALIDATION
+// =========================
+
+document.querySelector('form')
+.addEventListener(
+    'submit',
+    function(e) {
+
+        if (!validateForm(true)) {
+
+            e.preventDefault();
+
+            const firstInvalid =
+                document.querySelector(
+                    '.border-red-500'
+                );
+
+            if (firstInvalid) {
+                firstInvalid.focus();
+            }
+        }
+    }
+);
+
+// INITIAL VALIDATION
+validateForm(false);
 
 </script>
 
