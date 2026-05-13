@@ -17,15 +17,15 @@
 </div>
 
 <!-- SEARCH -->
-@if(auth()->user()->hasRole('super_admin'))
 
 <!-- SEARCH -->
 <input id="searchInput"
-    placeholder="Search by provider..."
+    placeholder="{{ Auth::user()->hasRole('super_admin')
+        ? 'Search department or provider...'
+        : 'Search department...' }}"
     class="w-full p-3 border rounded-xl mb-6 focus:ring-2"
     style="border-color:#e5e7eb;">
 
-@endif
 <!-- TABLE -->
 <div class="bg-white rounded-2xl shadow border overflow-hidden">
 

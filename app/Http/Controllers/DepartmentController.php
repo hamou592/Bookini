@@ -11,37 +11,73 @@ use Illuminate\Support\Facades\Auth;
 class DepartmentController extends Controller
 {
     public function index(Request $request)
-    {
-        $query = Department::with('provider');
+{
+    $query = Department::with('provider');
 
-        // 🔐 ROLE FILTER
-        if (!Auth::user()->hasRole('super_admin')) {
-            $query->where('provider_id', Auth::user()->provider_id);
-        }
-
-        // 🔍 SEARCH BY PROVIDER NAME
-        if ($request->search && Auth::user()->hasRole('super_admin')) {
-
-    $query->whereHas('provider', function ($q) use ($request) {
-
-        $q->where(
-            'name',
-            'like',
-            '%' . $request->search . '%'
-        );
-    });
-}
-
-        $departments = $query->latest()->paginate(10)->withQueryString();
-
-        // AJAX
-        if ($request->ajax()) {
-            return view('departments.partials.table', compact('departments'))->render();
-        }
-
-        return view('departments.index', compact('departments'));
+    // 🔐 ROLE FILTER
+    if (!Auth::user()->hasRole('super_admin')) {
+        $query->where('provider_id', Auth::user()->provider_id);
     }
 
+    // 🔍 SEARCH
+    if ($request->search) {
+
+        // SUPER ADMIN
+        if (Auth::user()->hasRole('super_admin')) {
+
+            $query->where(function ($q) use ($request) {
+
+                // Department name
+                $q->where(
+                    'name',
+                    'like',
+                    '%' . $request->search . '%'
+                )
+
+                // Provider name
+                ->orWhereHas('provider', function ($providerQuery) use ($request) {
+
+                    $providerQuery->where(
+                        'name',
+                        'like',
+                        '%' . $request->search . '%'
+                    );
+                });
+
+            });
+
+        }
+
+        // NON SUPER ADMIN
+        else {
+
+            $query->where(
+                'name',
+                'like',
+                '%' . $request->search . '%'
+            );
+
+        }
+    }
+
+    $departments = $query
+        ->latest()
+        ->paginate(10)
+        ->withQueryString();
+
+    // AJAX
+    if ($request->ajax()) {
+        return view(
+            'departments.partials.table',
+            compact('departments')
+        )->render();
+    }
+
+    return view(
+        'departments.index',
+        compact('departments')
+    );
+}
 private function authorizeDepartment($providerId)
 {
     $user = Auth::user();
