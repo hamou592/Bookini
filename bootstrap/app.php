@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ]);
     $middleware->alias([
     'hasRole' => \App\Http\Middleware\HasRole::class,
+    'clinic.provider' =>
+            \App\Http\Middleware\EnsureClinicProvider::class,
 ]);
 })
     ->withExceptions(function (Exceptions $exceptions): void {

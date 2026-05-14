@@ -40,7 +40,7 @@ Route::middleware(['auth', 'hasRole:super_admin'])->group(function () {
     
 });
 
-Route::middleware(['auth', 'hasRole:super_admin,provider_admin,secretary'])->group(function () {
+Route::middleware(['auth', 'hasRole:super_admin,provider_admin,secretary','clinic.provider'])->group(function () {
 
     Route::get('/departments', [DepartmentController::class, 'index']);
 
