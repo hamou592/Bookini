@@ -10,20 +10,138 @@ use Illuminate\Support\Facades\Auth;
 
 class ServiceController extends Controller
 {
-    public function index()
-    {
-        $query = Service::with(['provider', 'department']);
+   public function index(Request $request)
+{
+    $user = Auth::user();
 
-        // SUPER ADMIN => all services
-        if (!Auth::user()->hasRole('super_admin')) {
+    $query = Service::with([
+        'provider',
+        'department'
+    ]);
 
-            $query->where('provider_id', Auth::user()->provider_id);
+    // 🔐 NON SUPER ADMIN
+    if (!$user->hasRole('super_admin')) {
+
+        $query->where(
+            'provider_id',
+            $user->provider_id
+        );
+    }
+
+    // 🔍 SEARCH
+    if ($request->search) {
+
+        // SUPER ADMIN
+        if ($user->hasRole('super_admin')) {
+
+            $query->where(function ($q) use ($request) {
+
+                // Service name
+                $q->where(
+                    'name',
+                    'like',
+                    '%' . $request->search . '%'
+                )
+
+                // Provider name
+                ->orWhereHas('provider', function ($providerQuery) use ($request) {
+
+                    $providerQuery->where(
+                        'name',
+                        'like',
+                        '%' . $request->search . '%'
+                    );
+                })
+
+                // Department name
+                ->orWhereHas('department', function ($departmentQuery) use ($request) {
+
+                    $departmentQuery->where(
+                        'name',
+                        'like',
+                        '%' . $request->search . '%'
+                    );
+                });
+
+            });
+
         }
 
-        $services = $query->latest('id')->get();
+        // CLINIC PROVIDER
+        elseif ($user->provider?->type === 'clinic') {
 
-        return view('services.index', compact('services'));
+            $query->where(function ($q) use ($request) {
+
+                // Service name
+                $q->where(
+                    'name',
+                    'like',
+                    '%' . $request->search . '%'
+                )
+
+                // Department name
+                ->orWhereHas('department', function ($departmentQuery) use ($request) {
+
+                    $departmentQuery->where(
+                        'name',
+                        'like',
+                        '%' . $request->search . '%'
+                    );
+                });
+
+            });
+
+        }
+
+        // DOCTOR PROVIDER
+        else {
+
+            $query->where(
+                'name',
+                'like',
+                '%' . $request->search . '%'
+            );
+        }
     }
+
+    // ✅ STATUS FILTER
+    if ($request->status !== null && $request->status !== '') {
+
+        $query->where(
+            'is_active',
+            $request->status
+        );
+    }
+
+    $services = $query
+        ->latest('id')
+        ->paginate(10)
+        ->withQueryString();
+
+    // AJAX
+    if ($request->ajax()) {
+
+    $isSuperAdmin =
+        $user->hasRole('super_admin');
+
+    $isClinicProvider =
+        $user->provider?->type === 'clinic';
+
+    return view(
+        'services.partials.table',
+        compact(
+            'services',
+            'isSuperAdmin',
+            'isClinicProvider'
+        )
+    )->render();
+}
+
+    return view(
+        'services.index',
+        compact('services')
+    );
+}
 
    public function create()
 {
